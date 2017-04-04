@@ -1,7 +1,7 @@
 -------------------------------------------------------------------
 ---
 --- FriCAS MathJaxFormat
---- Copyright (C) 2015,  Ralf Hemmecke <ralf@hemmecke.org>
+--- Copyright (C) 2015, 2017,  Ralf Hemmecke <ralf@hemmecke.org>
 ---
 -------------------------------------------------------------------
 -- This program is free software: you can redistribute it and/or modify
@@ -145,9 +145,9 @@ MathJaxFormat: public == private where
       ++ If no handler is found, the operator is treated as a function
       ++ symbol and formatted as such.
     theMap: HANDLER
-      ++ \spad{theMap(cmd)} is a special handler to format a function.
-      ++ The respective function name will be put into the argument of a
-      ++ \TeX{} command given by \spad{cmd}.
+      ++ \spad{theMap} is a special handler to format a function.
+      ++ The respective function name n will be output like
+      ++ "\mathtt{TheMap}(\operatorname{n}".
     nullary: S -> HANDLER
       ++ \spad{nullary(cmd)} is a handler to format nullary operators.
       ++ It simply returns \spad{cmd}, i.e., \spad{cmd} must not change it
@@ -155,10 +155,10 @@ MathJaxFormat: public == private where
       ++ words, add a space or a pair of braces after it, if this is
       ++ necessary.
     unaryNoParen: (S, S) -> HANDLER
-      ++ \spad{unaryNoParen(cmd)} returns a handler such that
-      ++ \spad{unaryNoParen(cmd)(prec, args)} formats \spad{args.1}
-      ++ without outer parentheses and puts the result into the argument
-      ++ of the \TeX{} command given by \spad{cmd}.
+      ++ \spad{unaryNoParen(left,right)} returns a handler such that
+      ++ \spad{unaryNoParen(left, right)(prec, args)} formats \spad{args.1}
+      ++ without outer parentheses and puts the result parentheses given
+      ++ by left and right.
     binaryNoParen: S -> HANDLER
       ++ \spad{binaryNoParen(cmd)} returns a handler such that
       ++ \spad{binaryNoParen(cmd)(prec, args)} formats \spad{args.1} and
@@ -216,7 +216,7 @@ MathJaxFormat: public == private where
       ++ Outer parentheses are added if \spad{p < prec}.
     slash: I -> HANDLER
       ++ Special treatment in order to make the / adapt to the size of
-      ++the arguments.
+      ++ the arguments.
     scripts: I -> HANDLER
       ++ \spad{scripts(p)} returns a handler such that
       ++ \spad{scripts(p)(prec, args)} formats the first argument
@@ -349,9 +349,10 @@ gets the session step number as an argument.
         f
 
 )if LiterateDoc
-???
-The \spad{fillLines} function concatenates the strings such that
-each line is at most \spad{maxLineLength} long.
+The original idea of the \spad{fillLines} function was to concatenate
+the strings such that each line is at most \spad{maxLineLength} long.
+For mathjax output that is not needed, so we ignore the length
+parameter and simply concatenate all lines.
 )endif
 
     fillLines(ls: LS, maxLineLength: I): LS == [concat ls]
@@ -612,7 +613,7 @@ supersub(a, [sub1, super1, sub2, super2, ...])
 from \spadtype{OutputForm}.
 We basically turn it into something like
 \begin{verbcode}
-\ALTSUPERSUB{a}{_{sub1}^{super1}{_{sub2}^{super2}...}
+\ALTSUPERSUB{a}{_{sub1}^{super1}_{sub2}^{super2}...}
 \end{verbcode}
 and let an appropriate \LaTeX{} package deal with the actual formatting,
 for example, the \href{http://www.ctan.org/pkg/tensor}{tensor package}.
@@ -791,25 +792,10 @@ The operators have been mainly extracted from the definitions of
 )if LiterateDoc
 \section{Customization}
 
-?????
+The visual appearance of expressions can be changed like in the
+TexFormat domain.
 
-The visual appearance of expressions in a \LaTeX{} document can be
-customized in two places. The definitions of the \TeX{} commands in the
-style file can be changed. Furthermore also the internal data structure
-of the handlers can be modified.
-
-By default, \spadtype{TexFormat} puts \verb'\COMMA' where one would
-normally expect a simple comma character. This together with the definition
-\begin{verbcode}
-\def\COMMA{,\linebreak[2]\:}
-\end{verbcode}
-has been set as the default in order to allow automatic linebreaks after
-a comma. Unfortunately, the \LaTeX{} breqn package does not break lines
-by default also at a comma.
-
-Furthermore, the \verb'\COMMA' command adds a small space after the comma.
-
-One can, however, easily change the default by simply executing the
+One can easily change the default by simply executing the
 following command.
 \begin{verbcode}
 setHandler!(-1, "AGGLST", naryNoParen ",")

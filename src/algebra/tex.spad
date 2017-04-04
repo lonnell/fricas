@@ -178,6 +178,8 @@ TexFormat: public == private where
       ++ according to the precedence \spad{p1} and puts the result into
       ++ the argument of the \TeX{} command given by \spad{cmd}.
       ++ Outer parentheses are added if \spad{p < prec}.
+    binary: (S, I) -> HANDLER
+      ++ \spad{binary(cmd, p)} is identical to \spad{binary2(cmd, p, p, p}.
     binary2: (S, I, I, I) -> HANDLER
       ++ \spad{binary2(cmd, p, p1, p2)} returns a handler such that
       ++ \spad{binary2(cmd, p, p1, p2)(prec, args)} formats \spad{args.1}
@@ -186,8 +188,6 @@ TexFormat: public == private where
       ++ It puts the result into the first and second
       ++ argument of the \TeX{} command given by \spad{cmd}.
       ++ Outer parentheses are added if \spad{p < prec}.
-    binary: (S, I) -> HANDLER
-      ++ \spad{binary(cmd, p)} is identical to \spad{binary2(cmd, p, p, p}.
     nary: (S, I) -> HANDLER
       ++ \spad{nary(sep, p)} returns a handler such that
       ++ \spad{nary(sep, p)(prec, args)} formats the arguments
@@ -371,13 +371,15 @@ put on just one line, so we must hide the newline by a comment sign.
         (concat [prologue f, s, epilogue f])::E
 
     -- local function definitions
-
-    tex1(cmd: S, s: LS): LS == concat [[cmd, "{"], s, ["}"]]
+    parenthesize(left: S, right: S, s: LS): LS == concat [[left], s, [right]]
+    formatBinary(l: S, m: S, r: S, a1: LS, a2: LS): LS ==
+        concat [cons(l, a1), cons(m, a2), [r]]
+    tex1(cmd: S, s: LS): LS == parenthesize(concat(cmd, "{"), "}", s)
     tex2(cmd: S, s1: LS, s2: LS): LS ==
-        concat [[cmd, "{"], s1, ["}{"], s2, ["}"]]
+        formatBinary(concat(cmd, "{"), "}{", "}", s1, s2)
     infix(op: S, s1: LS, s2: LS): LS == concat  [s1, [op], s2]
     parenthesizeIf(needParen?: Boolean, s: LS): LS ==
-        needParen? => concat [["\PAREN{"], s, ["}"]]
+        needParen? => parenthesize("\PAREN{", "}", s)
         s
 
     formatFunction(op: LS, args: LE): LS ==
@@ -501,22 +503,22 @@ The only option we have for this case is to output \verb'\theMap{theMap(...)}'.
         p2 := position(char ";", s, p1+1)
         tex1(tex, [s(p1+1..p2-1)]) -- \theMap{FUNNAME}
 
-    nullary(tex: S): HANDLER == (prec: I, args: LE): LS +-> [tex]
+    nullary(op: S): HANDLER == (prec: I, args: LE): LS +-> [op]
 
     -- We can assume #args=1.
-    unaryNoParen(tex: S): HANDLER == (prec: I, args: LE): LS +->
-        tex1(tex, formatExpression(first args, minPrec))
+    unaryNoParen(op: S): HANDLER == (prec: I, args: LE): LS +->
+        tex1(op, formatExpression(first args, minPrec))
 
     -- We can assume #args=1.
-    unary(tex: S, p: I, p1: I): HANDLER == (prec: I, args: LE): LS +->
-        parenthesizeIf(p < prec, tex1(tex, formatExpression(first args, p1)))
+    unary(op: S, p: I, p1: I): HANDLER == (prec: I, args: LE): LS +->
+        parenthesizeIf(p < prec, tex1(op, formatExpression(first args, p1)))
 
-    binary2(tex: S, p: I, p1: I, p2: I): HANDLER == (prec: I, args: LE): LS +->
+    binary2(op: S, p: I, p1: I, p2: I): HANDLER == (prec: I, args: LE): LS +->
         parenthesizeIf(p < prec,
-                       tex2(tex, formatExpression(args.1, p1),
-                                 formatExpression(args.2, p2)))
+                       tex2(op, formatExpression(args.1, p1),
+                                formatExpression(args.2, p2)))
 
-    binaryNoParen(tex: S): HANDLER == binary2(tex, maxPrec, minPrec, minPrec)
+    binaryNoParen(op: S): HANDLER == binary2(op, maxPrec, minPrec, minPrec)
 
     binary(tex: S, p: I): HANDLER == binary2(tex, p, p, p)
 
